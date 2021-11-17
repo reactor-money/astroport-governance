@@ -1,5 +1,6 @@
 pub mod asset;
 pub mod astro_vesting;
+pub mod mars_vesting;
 pub mod querier;
 
 #[allow(clippy::all)]
