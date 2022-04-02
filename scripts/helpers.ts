@@ -85,7 +85,7 @@ import {
   ) {
     let options: CreateTxOptions = {
       msgs: [msg],
-      gasPrices: [new Coin("uusd", 0.15)],
+      gasPrices: [new Coin("uluna", 0.15)],
       memo: memo,
     };
 
