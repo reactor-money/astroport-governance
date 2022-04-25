@@ -48,7 +48,7 @@ pub fn instantiate(
         deps.storage,
         &Config {
             owner: deps.api.addr_validate(&msg.owner)?,
-            astro_token: deps.api.addr_validate(&msg.astro_token)?,
+            rct_token: deps.api.addr_validate(&msg.rct_token)?,
             max_allocations_amount: msg.max_allocations_amount,
         },
     )?;
@@ -59,21 +59,21 @@ pub fn instantiate(
 /// Exposes all the execute functions available in the contract.
 ///
 /// ## Execute messages
-/// * **ExecuteMsg::Receive(cw20_msg)** Parse incoming messages coming from the ASTRO token contract.
+/// * **ExecuteMsg::Receive(cw20_msg)** Parse incoming messages coming from the RCT token contract.
 ///
-/// * **ExecuteMsg::Withdraw** Withdraw unlocked ASTRO.
+/// * **ExecuteMsg::Withdraw** Withdraw unlocked RCT.
 ///
 /// * **ExecuteMsg::TransferOwnership** Transfer contract ownership.
 ///
-/// * **ExecuteMsg::ProposeNewReceiver** Propose a new receiver for a specific ASTRO unlock schedule.
+/// * **ExecuteMsg::ProposeNewReceiver** Propose a new receiver for a specific RCT unlock schedule.
 ///
 /// * **ExecuteMsg::DropNewReceiver** Drop the proposal to change the receiver for an unlock schedule.
 ///
 /// * **ExecuteMsg::ClaimReceiver**  Claim the position as a receiver for a specific unlock schedule.
 ///
-/// * **ExecuteMsg::IncreaseAllocation** Increase ASTRO allocation for receiver.
+/// * **ExecuteMsg::IncreaseAllocation** Increase RCT allocation for receiver.
 ///
-/// * **ExecuteMsg::DecreaseAllocation** Decrease ASTRO allocation for receiver.
+/// * **ExecuteMsg::DecreaseAllocation** Decrease RCT allocation for receiver.
 ///
 /// * **ExecuteMsg::TransferUnallocated** Transfer unallocated tokens.
 ///
@@ -174,8 +174,8 @@ fn execute_receive_cw20(
         ReceiveMsg::IncreaseAllocation { user, amount } => {
             let config = CONFIG.load(deps.storage)?;
 
-            if config.astro_token != info.sender {
-                return Err(StdError::generic_err("Only ASTRO can be deposited"));
+            if config.rct_token != info.sender {
+                return Err(StdError::generic_err("Only RCT can be deposited"));
             }
             if addr_validate_to_lower(deps.api, &cw20_msg.sender)? != config.owner {
                 return Err(StdError::generic_err(
@@ -200,11 +200,11 @@ fn execute_receive_cw20(
 /// ## Queries
 /// * **QueryMsg::Config {}** Return the contract configuration.
 ///
-/// * **QueryMsg::State {}** Return the contract state (number of ASTRO that still need to be withdrawn).
+/// * **QueryMsg::State {}** Return the contract state (number of RCT that still need to be withdrawn).
 ///
 /// * **QueryMsg::Allocation {}** Return the allocation details for a specific account.
 ///
-/// * **QueryMsg::UnlockedTokens {}** Return the amoint of unlocked ASTRO for a specific account.
+/// * **QueryMsg::UnlockedTokens {}** Return the amoint of unlocked RCT for a specific account.
 ///
 /// * **QueryMsg::SimulateWithdraw {}** Return the result of a withdrawal simulation.
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -229,7 +229,7 @@ pub fn query(deps: Deps, env: Env, msg: QueryMsg) -> StdResult<Binary> {
 ///
 /// * **creator** is an object of type [`String`]. This is the allocations creator (the contract admin).
 ///
-/// * **deposit_token** is an object of type [`Addr`]. This is the token being deposited (should be ASTRO).
+/// * **deposit_token** is an object of type [`Addr`]. This is the token being deposited (should be RCT).
 ///
 /// * **deposit_amount** is an object of type [`Uint128`]. This is the of tokens sent along with the call (should equal the sum of allocation amounts)
 ///
@@ -250,20 +250,20 @@ fn execute_create_allocations(
         ));
     }
 
-    if deposit_token != config.astro_token {
-        return Err(StdError::generic_err("Only ASTRO can be deposited"));
+    if deposit_token != config.rct_token {
+        return Err(StdError::generic_err("Only RCT can be deposited"));
     }
 
     if deposit_amount != allocations.iter().map(|params| params.1.amount).sum() {
-        return Err(StdError::generic_err("ASTRO deposit amount mismatch"));
+        return Err(StdError::generic_err("RCT deposit amount mismatch"));
     }
 
-    state.total_astro_deposited += deposit_amount;
-    state.remaining_astro_tokens += deposit_amount;
+    state.total_rct_deposited += deposit_amount;
+    state.remaining_rct_tokens += deposit_amount;
 
-    if state.total_astro_deposited > config.max_allocations_amount {
+    if state.total_rct_deposited > config.max_allocations_amount {
         return Err(StdError::generic_err(format!(
-            "The total allocation for all recipients cannot exceed total ASTRO amount allocated to unlock (currently {} ASTRO)",
+            "The total allocation for all recipients cannot exceed total RCT amount allocated to unlock (currently {} RCT)",
             config.max_allocations_amount,
         )));
     }
@@ -303,7 +303,7 @@ fn execute_create_allocations(
 }
 
 /// ## Description
-/// Allow allocation recipients to withdraw unlocked ASTRO.
+/// Allow allocation recipients to withdraw unlocked RCT.
 /// ## Params
 /// * **deps** is an object of type [`DepsMut`].
 ///
@@ -317,10 +317,10 @@ fn execute_withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Res
     let params = PARAMS.load(deps.storage, &info.sender)?;
     let mut status = STATUS.load(deps.storage, &info.sender)?;
 
-    let SimulateWithdrawResponse { astro_to_withdraw } =
+    let SimulateWithdrawResponse { rct_to_withdraw: reactor_to_withdraw } =
         helpers::compute_withdraw_amount(env.block.time.seconds(), &params, &mut status);
 
-    state.remaining_astro_tokens -= astro_to_withdraw;
+    state.remaining_rct_tokens -= reactor_to_withdraw;
 
     // SAVE :: state & allocation
     STATE.save(deps.storage, &state)?;
@@ -330,22 +330,22 @@ fn execute_withdraw(deps: DepsMut, env: Env, info: MessageInfo) -> StdResult<Res
 
     let mut msgs: Vec<WasmMsg> = vec![];
 
-    if astro_to_withdraw.is_zero() {
-        return Err(StdError::generic_err("No unlocked ASTRO to be withdrawn"));
+    if reactor_to_withdraw.is_zero() {
+        return Err(StdError::generic_err("No unlocked RCT to be withdrawn"));
     }
 
     msgs.push(WasmMsg::Execute {
-        contract_addr: config.astro_token.to_string(),
+        contract_addr: config.rct_token.to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Transfer {
             recipient: info.sender.to_string(),
-            amount: astro_to_withdraw,
+            amount: reactor_to_withdraw,
         })?,
         funds: vec![],
     });
 
     Ok(Response::new()
         .add_messages(msgs)
-        .add_attribute("astro_withdrawn", astro_to_withdraw))
+        .add_attribute("rct_withdrawn", reactor_to_withdraw))
 }
 
 /// ## Description
@@ -376,7 +376,7 @@ fn execute_propose_new_receiver(
                 .unwrap_or_default();
             if !alloc_params_new_receiver.amount.is_zero() {
                 return Err(StdError::generic_err(format!(
-                    "Invalid new_receiver. Proposed receiver already has an ASTRO allocation of {} ASTRO",
+                    "Invalid new_receiver. Proposed receiver already has an RCT allocation of {} RCT",
                     alloc_params_new_receiver.amount
                 )));
             }
@@ -428,7 +428,7 @@ fn execute_drop_new_receiver(deps: DepsMut, info: MessageInfo) -> StdResult<Resp
 ///
 /// * **receiver** is an object of type [`String`]. Decreasing receiver.
 ///
-/// * **amount** is an object of type [`Uint128`]. ASTRO amount to decrease.
+/// * **amount** is an object of type [`Uint128`]. RCT amount to decrease.
 fn execute_decrease_allocation(
     deps: DepsMut,
     env: Env,
@@ -459,7 +459,7 @@ fn execute_decrease_allocation(
 
     if locked_amount < amount {
         return Err(StdError::generic_err(format!(
-            "Insufficient amount of lock to decrease allocation, User has locked {} ASTRO.",
+            "Insufficient amount of lock to decrease allocation, User has locked {} RCT.",
             locked_amount
         )));
     }
@@ -467,7 +467,7 @@ fn execute_decrease_allocation(
     params.amount = params.amount.checked_sub(amount)?;
     status.unlocked_amount_checkpoint = unlocked_amount;
     state.unallocated_tokens = state.unallocated_tokens.checked_add(amount)?;
-    state.remaining_astro_tokens = state.remaining_astro_tokens.checked_sub(amount)?;
+    state.remaining_rct_tokens = state.remaining_rct_tokens.checked_sub(amount)?;
 
     STATUS.save(deps.storage, &receiver, &status)?;
     PARAMS.save(deps.storage, &receiver, &params)?;
@@ -488,9 +488,9 @@ fn execute_decrease_allocation(
 ///
 /// * **receiver** is an object of type [`String`]. Increasing receiver.
 ///
-/// * **amount** is an object of type [`Uint128`]. ASTRO amount to increase.
+/// * **amount** is an object of type [`Uint128`]. RCT amount to increase.
 ///
-/// * **deposit_amount** is an [`Option`] of type [`Uint128`]. Amount of ASTRO to increase using CW20 Receive.
+/// * **deposit_amount** is an [`Option`] of type [`Uint128`]. Amount of RCT to increase using CW20 Receive.
 fn execute_increase_allocation(
     deps: DepsMut,
     config: &Config,
@@ -505,13 +505,13 @@ fn execute_increase_allocation(
             let mut state = STATE.load(deps.storage)?;
 
             if let Some(deposit_amount) = deposit_amount {
-                state.total_astro_deposited =
-                    state.total_astro_deposited.checked_add(deposit_amount)?;
+                state.total_rct_deposited =
+                    state.total_rct_deposited.checked_add(deposit_amount)?;
                 state.unallocated_tokens = state.unallocated_tokens.checked_add(deposit_amount)?;
 
-                if state.total_astro_deposited > config.max_allocations_amount {
+                if state.total_rct_deposited > config.max_allocations_amount {
                     return Err(StdError::generic_err(format!(
-                        "The total allocation for all recipients cannot exceed total ASTRO amount allocated to unlock (currently {} ASTRO)",
+                        "The total allocation for all recipients cannot exceed total RCT amount allocated to unlock (currently {} RCT)",
                         config.max_allocations_amount,
                     )));
                 }
@@ -519,14 +519,14 @@ fn execute_increase_allocation(
 
             if state.unallocated_tokens < amount {
                 return Err(StdError::generic_err(format!(
-                    "Insufficient unallocated ASTRO to increase allocation. Contract has: {} unallocated ASTRO.",
+                    "Insufficient unallocated RCT to increase allocation. Contract has: {} unallocated RCT.",
                     state.unallocated_tokens
                 )));
             }
 
             params.amount = params.amount.checked_add(amount)?;
             state.unallocated_tokens = state.unallocated_tokens.checked_sub(amount)?;
-            state.remaining_astro_tokens = state.remaining_astro_tokens.checked_add(amount)?;
+            state.remaining_rct_tokens = state.remaining_rct_tokens.checked_add(amount)?;
 
             PARAMS.save(deps.storage, &receiver, &params)?;
             STATE.save(deps.storage, &state)?;
@@ -543,13 +543,13 @@ fn execute_increase_allocation(
 }
 
 /// ## Description
-/// Transfer unallocated ASTRO tokens to recipient.
+/// Transfer unallocated RCT tokens to recipient.
 /// ## Params
 /// * **deps** is an object of type [`DepsMut`].
 ///
 /// * **info** is an object of type [`MessageInfo`].
 ///
-/// * **amount** is an object of type [`Uint128`]. Amount ASTRO to transfer.
+/// * **amount** is an object of type [`Uint128`]. Amount RCT to transfer.
 ///
 /// * **recipient** is an [`Option`] of type [`u64`]. Transfer recipient.
 fn execute_transfer_unallocated(
@@ -568,13 +568,13 @@ fn execute_transfer_unallocated(
 
     if config.owner != info.sender {
         return Err(StdError::generic_err(
-            "Only contract owner can transfer unallocated ASTRO.",
+            "Only contract owner can transfer unallocated RCT.",
         ));
     }
 
     if state.unallocated_tokens < amount {
         return Err(StdError::generic_err(format!(
-            "Insufficient unallocated ASTRO to transfer. Contract has: {} unallocated ASTRO.",
+            "Insufficient unallocated RCT to transfer. Contract has: {} unallocated RCT.",
             state.unallocated_tokens
         )));
     }
@@ -582,7 +582,7 @@ fn execute_transfer_unallocated(
     state.unallocated_tokens = state.unallocated_tokens.checked_sub(amount)?;
 
     let msg = WasmMsg::Execute {
-        contract_addr: config.astro_token.to_string(),
+        contract_addr: config.rct_token.to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Transfer {
             recipient: recipient.to_string(),
             amount,
@@ -618,7 +618,7 @@ fn execute_claim_receiver(
             if proposed_receiver == info.sender {
                 if let Some(sender_params) = PARAMS.may_load(deps.storage, &info.sender)? {
                     return Err(StdError::generic_err(format!(
-                        "The proposed receiver already has an ASTRO allocation of {} ASTRO, that ends at {}",
+                        "The proposed receiver already has an RCT allocation of {} RCT, that ends at {}",
                         sender_params.amount,
                         sender_params.unlock_schedule.start_time + sender_params.unlock_schedule.duration + sender_params.unlock_schedule.cliff,
                     )));
@@ -636,9 +636,9 @@ fn execute_claim_receiver(
                     STATUS.load(deps.storage, &deps.api.addr_validate(&prev_receiver)?)?;
 
                 if let Some(sender_status) = STATUS.may_load(deps.storage, &info.sender)? {
-                    status.astro_withdrawn = status
-                        .astro_withdrawn
-                        .checked_add(sender_status.astro_withdrawn)?;
+                    status.rct_withdrawn = status
+                        .rct_withdrawn
+                        .checked_add(sender_status.rct_withdrawn)?;
                 }
 
                 STATUS.save(deps.storage, &info.sender, &status)?;
@@ -705,9 +705,9 @@ fn query_config(deps: Deps) -> StdResult<Config> {
 pub fn query_state(deps: Deps) -> StdResult<StateResponse> {
     let state = STATE.may_load(deps.storage)?.unwrap_or_default();
     Ok(StateResponse {
-        total_astro_deposited: state.total_astro_deposited,
-        remaining_astro_tokens: state.remaining_astro_tokens,
-        unallocated_astro_tokens: state.unallocated_tokens,
+        total_rct_deposited: state.total_rct_deposited,
+        remaining_rct_tokens: state.remaining_rct_tokens,
+        unallocated_rct_tokens: state.unallocated_tokens,
     })
 }
 
@@ -804,8 +804,8 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> StdResult<Response>
                 STATE.save(
                     deps.storage,
                     &State {
-                        total_astro_deposited: state_v100.total_astro_deposited,
-                        remaining_astro_tokens: state_v100.remaining_astro_tokens,
+                        total_rct_deposited: state_v100.total_rct_deposited,
+                        remaining_rct_tokens: state_v100.remaining_rct_tokens,
                         unallocated_tokens: Uint128::zero(),
                     },
                 )?;
@@ -818,7 +818,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> StdResult<Response>
                 for key in keys {
                     let status_v100 = STATUSV100.load(deps.storage, &Addr::unchecked(&key))?;
                     let status = AllocationStatus {
-                        astro_withdrawn: status_v100.astro_withdrawn,
+                        rct_withdrawn: status_v100.rct_withdrawn,
                         unlocked_amount_checkpoint: Uint128::zero(),
                     };
                     STATUS.save(deps.storage, &Addr::unchecked(key), &status)?;
@@ -830,7 +830,7 @@ pub fn migrate(deps: DepsMut, _env: Env, msg: MigrateMsg) -> StdResult<Response>
                     deps.storage,
                     &Config {
                         owner: config_v100.owner,
-                        astro_token: config_v100.astro_token,
+                        rct_token: config_v100.rct_token,
                         max_allocations_amount: msg.max_allocations_amount,
                     },
                 )?;
@@ -898,7 +898,7 @@ mod helpers {
         status: &mut AllocationStatus,
     ) -> SimulateWithdrawResponse {
         // "Unlocked" amount
-        let astro_unlocked = compute_unlocked_amount(
+        let rct_unlocked = compute_unlocked_amount(
             timestamp,
             params.amount,
             &params.unlock_schedule,
@@ -906,11 +906,11 @@ mod helpers {
         );
 
         // Withdrawable amount is unlocked amount minus the amount already withdrawn
-        let astro_withdrawable = astro_unlocked - status.astro_withdrawn;
-        status.astro_withdrawn += astro_withdrawable;
+        let rct_withdrawable = rct_unlocked - status.rct_withdrawn;
+        status.rct_withdrawn += rct_withdrawable;
 
         SimulateWithdrawResponse {
-            astro_to_withdraw: astro_withdrawable,
+            rct_to_withdraw: rct_withdrawable,
         }
     }
 }

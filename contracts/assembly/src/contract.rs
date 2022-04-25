@@ -723,7 +723,7 @@ pub fn calc_voting_power(deps: Deps, sender: String, proposal: &Proposal) -> Std
     if !locked_amount.params.amount.is_zero() {
         total = total
             .checked_add(locked_amount.params.amount)?
-            .checked_sub(locked_amount.status.astro_withdrawn)?;
+            .checked_sub(locked_amount.status.rct_withdrawn)?;
     }
 
     if let Some(vxastro_token_addr) = config.vxastro_token_addr {
@@ -776,8 +776,8 @@ pub fn calc_total_voting_power_at(deps: Deps, proposal: &Proposal) -> StdResult<
         .querier
         .query_wasm_smart(config.builder_unlock_addr, &BuilderUnlockQueryMsg::State {})?;
 
-    if !builder_state.remaining_astro_tokens.is_zero() {
-        total = total.checked_add(builder_state.remaining_astro_tokens)?;
+    if !builder_state.remaining_rct_tokens.is_zero() {
+        total = total.checked_add(builder_state.remaining_rct_tokens)?;
     }
 
     if let Some(vxastro_token_addr) = config.vxastro_token_addr {

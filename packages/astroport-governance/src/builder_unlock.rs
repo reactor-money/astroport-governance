@@ -7,20 +7,20 @@ use serde::{Deserialize, Serialize};
 pub struct Config {
     /// Account that can create new unlock schedules
     pub owner: Addr,
-    /// Address of ASTRO token
-    pub astro_token: Addr,
-    /// Max ASTRO tokens to allocate
+    /// Address of RCT token
+    pub rct_token: Addr,
+    /// Max rct tokens to allocate
     pub max_allocations_amount: Uint128,
 }
 
 /// This structure stores the total and the remaining amount of ASTRO to be unlocked by all accounts.
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct State {
-    /// Amount of ASTRO tokens deposited into the contract
-    pub total_astro_deposited: Uint128,
-    /// Currently available ASTRO tokens that still need to be unlocked and/or withdrawn
-    pub remaining_astro_tokens: Uint128,
-    /// Amount of ASTRO tokens deposited into contract but without allocation
+    /// Amount of RCT tokens deposited into the contract
+    pub total_rct_deposited: Uint128,
+    /// Currently available RCT tokens that still need to be unlocked and/or withdrawn
+    pub remaining_rct_tokens: Uint128,
+    /// Amount of RCT tokens deposited into contract but without allocation
     pub unallocated_tokens: Uint128,
 }
 
@@ -50,7 +50,7 @@ pub struct AllocationParams {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema, Default)]
 pub struct AllocationStatus {
     /// Amount of ASTRO already withdrawn
-    pub astro_withdrawn: Uint128,
+    pub rct_withdrawn: Uint128,
     /// Already unlocked amount after decreasing
     pub unlocked_amount_checkpoint: Uint128,
 }
@@ -58,7 +58,7 @@ pub struct AllocationStatus {
 impl AllocationStatus {
     pub const fn new() -> Self {
         Self {
-            astro_withdrawn: Uint128::zero(),
+            rct_withdrawn: Uint128::zero(),
             unlocked_amount_checkpoint: Uint128::zero(),
         }
     }
@@ -77,9 +77,9 @@ pub mod msg {
     pub struct InstantiateMsg {
         /// Account that can create new allocations
         pub owner: String,
-        /// ASTRO token address
-        pub astro_token: String,
-        /// Max ASTRO tokens to allocate
+        /// rct token address
+        pub rct_token: String,
+        /// Max rct tokens to allocate
         pub max_allocations_amount: Uint128,
     }
 
@@ -170,17 +170,17 @@ pub mod msg {
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
     pub struct SimulateWithdrawResponse {
         /// Amount of ASTRO to receive
-        pub astro_to_withdraw: Uint128,
+        pub rct_to_withdraw: Uint128,
     }
 
     /// This structure stores the parameters used to return the response when querying for the contract state.
     #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
     pub struct StateResponse {
-        /// ASTRO tokens deposited into the contract and that are meant to unlock
-        pub total_astro_deposited: Uint128,
-        /// Currently available ASTRO tokens that weren't yet withdrawn from the contract
-        pub remaining_astro_tokens: Uint128,
-        /// Currently available ASTRO tokens to withdraw or increase allocations by the owner
-        pub unallocated_astro_tokens: Uint128,
+        /// RCT tokens deposited into the contract and that are meant to unlock
+        pub total_rct_deposited: Uint128,
+        /// Currently available RCT tokens that weren't yet withdrawn from the contract
+        pub remaining_rct_tokens: Uint128,
+        /// Currently available RCT tokens to withdraw or increase allocations by the owner
+        pub unallocated_rct_tokens: Uint128,
     }
 }

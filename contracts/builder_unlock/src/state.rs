@@ -6,7 +6,7 @@ use astroport_governance::builder_unlock::{AllocationParams, AllocationStatus, C
 
 /// Stores the contract configuration
 pub const CONFIG: Item<Config> = Item::new("config");
-/// Stores global unlcok state such as the total amount of ASTRO tokens still to be distributed
+/// Stores global unlcok state such as the total amount of RCT tokens still to be distributed
 pub const STATE: Item<State> = Item::new("state");
 /// Allocation parameters for each unlock recipient
 pub const PARAMS: Map<&Addr, AllocationParams> = Map::new("params");

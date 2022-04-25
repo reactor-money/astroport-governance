@@ -65,7 +65,7 @@ fn init_contracts(app: &mut App) -> (Addr, Addr, InstantiateMsg) {
 
     let unlock_instantiate_msg = InstantiateMsg {
         owner: OWNER.clone().to_string(),
-        astro_token: astro_token_instance.to_string(),
+        rct_token: astro_token_instance.to_string(),
         max_allocations_amount: Uint128::new(300_000_000_000_000u128),
     };
 
@@ -145,7 +145,7 @@ fn proper_initialization() {
 
     // Check config
     assert_eq!(init_msg.owner, resp.owner);
-    assert_eq!(init_msg.astro_token, resp.astro_token);
+    assert_eq!(init_msg.rct_token, resp.rct_token);
 
     // Check state
     let resp: StateResponse = app
@@ -153,8 +153,8 @@ fn proper_initialization() {
         .query_wasm_smart(&unlock_instance, &QueryMsg::State {})
         .unwrap();
 
-    assert_eq!(Uint128::zero(), resp.total_astro_deposited);
-    assert_eq!(Uint128::zero(), resp.remaining_astro_tokens);
+    assert_eq!(Uint128::zero(), resp.total_rct_deposited);
+    assert_eq!(Uint128::zero(), resp.remaining_rct_tokens);
 }
 
 #[test]
@@ -185,7 +185,7 @@ fn test_transfer_ownership() {
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     app.execute_contract(
         Addr::unchecked("new_owner".to_string()),
@@ -193,7 +193,7 @@ fn test_transfer_ownership() {
         &ExecuteMsg::ClaimOwnership {},
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     let resp: ConfigResponse = app
         .wrap()
@@ -202,7 +202,7 @@ fn test_transfer_ownership() {
 
     // Check config
     assert_eq!("new_owner".to_string(), resp.owner);
-    assert_eq!(init_msg.astro_token, resp.astro_token);
+    assert_eq!(init_msg.rct_token, resp.rct_token);
 }
 
 #[test]
@@ -275,7 +275,7 @@ fn test_create_allocations() {
                 msg: to_binary(&ReceiveMsg::CreateAllocations {
                     allocations: allocations.clone(),
                 })
-                .unwrap(),
+                    .unwrap(),
             },
             &[],
         )
@@ -326,7 +326,7 @@ fn test_create_allocations() {
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     err = app
         .execute_contract(
@@ -338,7 +338,7 @@ fn test_create_allocations() {
                 msg: to_binary(&ReceiveMsg::CreateAllocations {
                     allocations: allocations.clone(),
                 })
-                .unwrap(),
+                    .unwrap(),
             },
             &[],
         )
@@ -359,7 +359,7 @@ fn test_create_allocations() {
                 msg: to_binary(&ReceiveMsg::CreateAllocations {
                     allocations: allocations.clone(),
                 })
-                .unwrap(),
+                    .unwrap(),
             },
             &[],
         )
@@ -379,11 +379,11 @@ fn test_create_allocations() {
             msg: to_binary(&ReceiveMsg::CreateAllocations {
                 allocations: allocations.clone(),
             })
-            .unwrap(),
+                .unwrap(),
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // Check state
     let resp: StateResponse = app
@@ -391,11 +391,11 @@ fn test_create_allocations() {
         .query_wasm_smart(&unlock_instance, &QueryMsg::State {})
         .unwrap();
     assert_eq!(
-        resp.total_astro_deposited,
+        resp.total_rct_deposited,
         Uint128::from(15_000_000_000000u64)
     );
     assert_eq!(
-        resp.remaining_astro_tokens,
+        resp.remaining_rct_tokens,
         Uint128::from(15_000_000_000000u64)
     );
 
@@ -410,13 +410,13 @@ fn test_create_allocations() {
         )
         .unwrap();
     assert_eq!(resp.params.amount, Uint128::from(5_000_000_000000u64));
-    assert_eq!(resp.status.astro_withdrawn, Uint128::from(0u64));
+    assert_eq!(resp.status.rct_withdrawn, Uint128::from(0u64));
     assert_eq!(
         resp.params.unlock_schedule,
         Schedule {
             start_time: 1642402274u64,
             cliff: 0u64,
-            duration: 31536000u64
+            duration: 31536000u64,
         }
     );
 
@@ -431,13 +431,13 @@ fn test_create_allocations() {
         )
         .unwrap();
     assert_eq!(resp.params.amount, Uint128::from(5_000_000_000000u64));
-    assert_eq!(resp.status.astro_withdrawn, Uint128::from(0u64));
+    assert_eq!(resp.status.rct_withdrawn, Uint128::from(0u64));
     assert_eq!(
         resp.params.unlock_schedule,
         Schedule {
             start_time: 1642402274u64,
             cliff: 7776000u64,
-            duration: 31536000u64
+            duration: 31536000u64,
         }
     );
 
@@ -452,13 +452,13 @@ fn test_create_allocations() {
         )
         .unwrap();
     assert_eq!(resp.params.amount, Uint128::from(5_000_000_000000u64));
-    assert_eq!(resp.status.astro_withdrawn, Uint128::from(0u64));
+    assert_eq!(resp.status.rct_withdrawn, Uint128::from(0u64));
     assert_eq!(
         resp.params.unlock_schedule,
         Schedule {
             start_time: 1642402274u64,
             cliff: 7776000u64,
-            duration: 31536000u64
+            duration: 31536000u64,
         }
     );
 
@@ -473,7 +473,7 @@ fn test_create_allocations() {
                 msg: to_binary(&ReceiveMsg::CreateAllocations {
                     allocations: vec![allocations[0].clone()],
                 })
-                .unwrap(),
+                    .unwrap(),
             },
             &[],
         )
@@ -545,11 +545,11 @@ fn test_withdraw() {
             msg: to_binary(&ReceiveMsg::CreateAllocations {
                 allocations: allocations.clone(),
             })
-            .unwrap(),
+                .unwrap(),
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // ######    ERROR :: Allocation doesn't exist    ######
     let err = app
@@ -587,7 +587,7 @@ fn test_withdraw() {
         &ExecuteMsg::Withdraw {},
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // Check state
     let state_resp: StateResponse = app
@@ -595,11 +595,11 @@ fn test_withdraw() {
         .query_wasm_smart(&unlock_instance, &QueryMsg::State {})
         .unwrap();
     assert_eq!(
-        state_resp.total_astro_deposited,
+        state_resp.total_rct_deposited,
         Uint128::from(15_000_000_000000u64)
     );
     assert_eq!(
-        state_resp.remaining_astro_tokens,
+        state_resp.remaining_rct_tokens,
         Uint128::from(14_999_999_841452u64)
     );
 
@@ -614,7 +614,7 @@ fn test_withdraw() {
         )
         .unwrap();
     assert_eq!(alloc_resp.params.amount, Uint128::from(5_000_000_000000u64));
-    assert_eq!(alloc_resp.status.astro_withdrawn, Uint128::from(158548u64));
+    assert_eq!(alloc_resp.status.rct_withdrawn, Uint128::from(158548u64));
 
     let astro_bal_after: BalanceResponse = app
         .wrap()
@@ -628,7 +628,7 @@ fn test_withdraw() {
 
     assert_eq!(
         astro_bal_after.balance - astro_bal_before.balance,
-        alloc_resp.status.astro_withdrawn
+        alloc_resp.status.rct_withdrawn
     );
 
     // Check the number of unlocked tokens
@@ -688,8 +688,8 @@ fn test_withdraw() {
         .unwrap();
 
     assert_eq!(
-        sim_withdraw_resp.astro_to_withdraw,
-        unlock_resp - alloc_resp.status.astro_withdrawn
+        sim_withdraw_resp.rct_to_withdraw,
+        unlock_resp - alloc_resp.status.rct_withdrawn
     );
 
     app.execute_contract(
@@ -698,7 +698,7 @@ fn test_withdraw() {
         &ExecuteMsg::Withdraw {},
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     let resp: AllocationResponse = app
         .wrap()
@@ -710,7 +710,7 @@ fn test_withdraw() {
         )
         .unwrap();
     assert_eq!(resp.params.amount, Uint128::from(5_000_000_000000u64));
-    assert_eq!(resp.status.astro_withdrawn, unlock_resp);
+    assert_eq!(resp.status.rct_withdrawn, unlock_resp);
 
     // ######    ERROR :: No unlocked ASTRO to be withdrawn   ######
     let err = app
@@ -758,7 +758,7 @@ fn test_withdraw() {
         .unwrap();
 
     assert_eq!(
-        sim_withdraw_resp.astro_to_withdraw,
+        sim_withdraw_resp.rct_to_withdraw,
         Uint128::from(1232876553779u64)
     );
 
@@ -792,7 +792,7 @@ fn test_withdraw() {
         .unwrap();
 
     assert_eq!(
-        sim_withdraw_resp.astro_to_withdraw,
+        sim_withdraw_resp.rct_to_withdraw,
         Uint128::from(1232877505073u64)
     );
 
@@ -802,7 +802,7 @@ fn test_withdraw() {
         &ExecuteMsg::Withdraw {},
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     let resp: AllocationResponse = app
         .wrap()
@@ -814,8 +814,8 @@ fn test_withdraw() {
         )
         .unwrap();
     assert_eq!(
-        resp.status.astro_withdrawn,
-        sim_withdraw_resp.astro_to_withdraw
+        resp.status.rct_withdrawn,
+        sim_withdraw_resp.rct_to_withdraw
     );
 
     // Check Number of tokens that can be withdrawn
@@ -830,7 +830,7 @@ fn test_withdraw() {
         )
         .unwrap();
 
-    assert_eq!(sim_withdraw_resp.astro_to_withdraw, Uint128::zero());
+    assert_eq!(sim_withdraw_resp.rct_to_withdraw, Uint128::zero());
 }
 
 #[test]
@@ -894,11 +894,11 @@ fn test_propose_new_receiver() {
             msg: to_binary(&ReceiveMsg::CreateAllocations {
                 allocations: allocations.clone(),
             })
-            .unwrap(),
+                .unwrap(),
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // ######    ERROR :: Allocation doesn't exist    ######
     let err = app
@@ -941,7 +941,7 @@ fn test_propose_new_receiver() {
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     let resp: AllocationResponse = app
         .wrap()
@@ -1035,11 +1035,11 @@ fn test_drop_new_receiver() {
             msg: to_binary(&ReceiveMsg::CreateAllocations {
                 allocations: allocations.clone(),
             })
-            .unwrap(),
+                .unwrap(),
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // ######    ERROR :: Allocation doesn't exist    ######
     let err = app
@@ -1076,7 +1076,7 @@ fn test_drop_new_receiver() {
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     let mut resp: AllocationResponse = app
         .wrap()
@@ -1098,7 +1098,7 @@ fn test_drop_new_receiver() {
         &ExecuteMsg::DropNewReceiver {},
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     resp = app
         .wrap()
@@ -1173,11 +1173,11 @@ fn test_claim_receiver() {
             msg: to_binary(&ReceiveMsg::CreateAllocations {
                 allocations: allocations.clone(),
             })
-            .unwrap(),
+                .unwrap(),
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // ######    ERROR :: Allocation doesn't exist    ######
     let err = app
@@ -1216,7 +1216,7 @@ fn test_claim_receiver() {
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     let alloc_resp_before: AllocationResponse = app
         .wrap()
@@ -1249,7 +1249,7 @@ fn test_claim_receiver() {
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // Check allocation state of previous beneficiary
     let alloc_resp_after: AllocationResponse = app
@@ -1311,7 +1311,7 @@ fn test_claim_receiver() {
         )
         .unwrap();
     assert_eq!(
-        sim_withdraw_resp_after_prev_inv.astro_to_withdraw,
+        sim_withdraw_resp_after_prev_inv.rct_to_withdraw,
         Uint128::zero()
     );
 
@@ -1327,8 +1327,8 @@ fn test_claim_receiver() {
         )
         .unwrap();
     assert_eq!(
-        sim_withdraw_resp_after_new_inv.astro_to_withdraw,
-        sim_withdraw_resp_before.astro_to_withdraw,
+        sim_withdraw_resp_after_new_inv.rct_to_withdraw,
+        sim_withdraw_resp_before.rct_to_withdraw,
     );
 }
 
@@ -1368,11 +1368,11 @@ fn test_increase_and_decrease_allocation() {
             msg: to_binary(&ReceiveMsg::CreateAllocations {
                 allocations: allocations.clone(),
             })
-            .unwrap(),
+                .unwrap(),
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // Check allocations before changes
     check_alloc_amount(
@@ -1395,7 +1395,7 @@ fn test_increase_and_decrease_allocation() {
         &ExecuteMsg::Withdraw {},
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // Skip blocks
     app.update_block(|bi| {
@@ -1436,7 +1436,7 @@ fn test_increase_and_decrease_allocation() {
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // Unlock amount didn't change after decreasing
     check_unlock_amount(
@@ -1453,9 +1453,9 @@ fn test_increase_and_decrease_allocation() {
     assert_eq!(
         res,
         StateResponse {
-            total_astro_deposited: Uint128::new(5_000_000_000_000u128),
-            remaining_astro_tokens: Uint128::new(3_984_687_561_087u128),
-            unallocated_astro_tokens: Uint128::new(1_000_000_000_000u128)
+            total_rct_deposited: Uint128::new(5_000_000_000_000u128),
+            remaining_rct_tokens: Uint128::new(3_984_687_561_087u128),
+            unallocated_rct_tokens: Uint128::new(1_000_000_000_000u128),
         }
     );
 
@@ -1486,7 +1486,7 @@ fn test_increase_and_decrease_allocation() {
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     let res: BalanceResponse = app
         .wrap()
@@ -1510,11 +1510,11 @@ fn test_increase_and_decrease_allocation() {
                 amount: Uint128::from(500_000_001_000u128),
                 user: "investor".to_string(),
             })
-            .unwrap(),
+                .unwrap(),
         },
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     // Withdraw ASTRO
     app.execute_contract(
@@ -1523,7 +1523,7 @@ fn test_increase_and_decrease_allocation() {
         &ExecuteMsg::Withdraw {},
         &[],
     )
-    .unwrap();
+        .unwrap();
 
     let res: BalanceResponse = app
         .wrap()
@@ -1554,7 +1554,7 @@ fn test_increase_and_decrease_allocation() {
             },
         )
         .unwrap();
-    assert_eq!(res.astro_to_withdraw, Uint128::zero());
+    assert_eq!(res.rct_to_withdraw, Uint128::zero());
     // Check state
     let res: StateResponse = app
         .wrap()
@@ -1563,9 +1563,9 @@ fn test_increase_and_decrease_allocation() {
     assert_eq!(
         res,
         StateResponse {
-            total_astro_deposited: Uint128::new(5_000_000_001_000u128),
-            remaining_astro_tokens: Uint128::new(4_419_528_247_563u128),
-            unallocated_astro_tokens: Uint128::zero()
+            total_rct_deposited: Uint128::new(5_000_000_001_000u128),
+            remaining_rct_tokens: Uint128::new(4_419_528_247_563u128),
+            unallocated_rct_tokens: Uint128::zero(),
         }
     );
 }
